@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moon Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --silver: #a8b8c8;
+    --deep: #04080f;
+    --card-bg: rgba(10, 16, 30, 0.82);
+    --border: rgba(201, 168, 76, 0.3);
+  }
+
+  body {
+    min-height: 100vh;
+    font-family: 'Raleway', sans-serif;
+    color: #e8e0d0;
+    overflow-x: hidden;
+    background: var(--deep);
+  }
+
+  #bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(60,40,10,0.4) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(10,20,60,0.5) 0%, transparent 60%),
+      url('https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1600&q=80') center/cover no-repeat;
+    filter: brightness(0.55) saturate(1.2);
+  }
+
+  .stars {
+    position: fixed; inset: 0; z-index: 1;
+    background-image:
+      radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.9) 0%, transparent 100%),
+      radial-gradient(1px 1px at 25% 60%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 8%, rgba(255,255,255,0.8) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 40%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 75%, rgba(255,255,255,0.9) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 85% 20%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 92% 55%, rgba(255,255,255,0.8) 0%, transparent 100%),
+      radial-gradient(1px 1px at 5% 85%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 38% 90%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 55% 70%, rgba(255,255,255,0.5) 0%, transparent 100%);
+    animation: twinkle 6s ease-in-out infinite alternate;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.6; }
+    100% { opacity: 1; }
+  }
+
+  #app {
+    position: relative; z-index: 10;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .logo {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--gold-light);
+    text-shadow: 0 0 40px rgba(201,168,76,0.6), 0 0 80px rgba(201,168,76,0.2);
+    margin-bottom: 0.3rem;
+    text-align: center;
+  }
+
+  .tagline {
+    font-size: 0.9rem;
+    letter-spacing: 0.3em;
+    color: var(--silver);
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+    text-align: center;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 680px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,168,76,0.15);
+    animation: fadeUp 0.6s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---- CATEGORY SCREEN ---- */
+  .screen-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .categories {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .cat-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.6rem;
+    padding: 1.8rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    color: #e8e0d0;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .cat-btn:hover {
+    background: rgba(201,168,76,0.12);
+    border-color: var(--gold);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(201,168,76,0.15);
+  }
+
+  .cat-icon { font-size: 2.2rem; }
+
+  /* ---- QUIZ SCREEN ---- */
+  .progress-bar-wrap {
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 99px;
+    margin-bottom: 1.8rem;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  .q-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.2rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--silver);
+  }
+
+  .q-cat { color: var(--gold); }
+
+  .question {
+    font-family: 'Raleway', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 500;
+    line-height: 1.6;
+    margin-bottom: 1.8rem;
+    color: #f0ead8;
+    min-height: 3.5rem;
+  }
+
+  .options {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .opt-btn {
+    padding: 0.9rem 1.2rem;
+    border: 1px solid rgba(168,184,200,0.25);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    color: #d8d0c0;
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.95rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 0.8rem;
+  }
+
+  .opt-btn:hover:not(:disabled) {
+    background: rgba(201,168,76,0.1);
+    border-color: var(--gold);
+    color: #f8f0d8;
+  }
+
+  .opt-btn.correct {
+    background: rgba(40,180,100,0.18);
+    border-color: #4cc878;
+    color: #a0f0c0;
+  }
+
+  .opt-btn.wrong {
+    background: rgba(220,60,60,0.18);
+    border-color: #e05555;
+    color: #f0a0a0;
+  }
+
+  .opt-btn:disabled { cursor: default; }
+
+  .opt-letter {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  .feedback {
+    margin-top: 1.2rem;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: none;
+  }
+
+  .feedback.show { display: block; animation: fadeUp 0.3s ease both; }
+  .feedback.correct-fb { background: rgba(40,180,100,0.15); color: #80e0a8; border: 1px solid rgba(76,200,120,0.3); }
+  .feedback.wrong-fb   { background: rgba(220,60,60,0.15);  color: #f0a0a0;  border: 1px solid rgba(224,85,85,0.3); }
+
+  .next-btn {
+    margin-top: 1.5rem;
+    width: 100%;
+    padding: 0.9rem;
+    background: linear-gradient(135deg, #8a6a1c, var(--gold));
+    border: none;
+    border-radius: 10px;
+    color: #1a1000;
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: none;
+  }
+
+  .next-btn.show { display: block; animation: fadeUp 0.3s ease both; }
+  .next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(201,168,76,0.4); }
+
+  /* ---- RESULT SCREEN ---- */
+  .result-icon { font-size: 4rem; text-align: center; margin-bottom: 1rem; }
+
+  .score-display {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .score-big {
+    font-family: 'Cinzel', serif;
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(201,168,76,0.5);
+  }
+
+  .score-sub { font-size: 0.9rem; color: var(--silver); letter-spacing: 0.1em; margin-top: 0.4rem; }
+
+  .result-msg {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #e0d8c8;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .result-actions { display: flex; gap: 1rem; }
+
+  .btn-secondary {
+    flex: 1; padding: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover { background: rgba(201,168,76,0.1); }
+
+  .btn-primary {
+    flex: 1; padding: 0.85rem;
+    border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #8a6a1c, var(--gold));
+    color: #1a1000;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(201,168,76,0.35); }
+
+  @media (max-width: 500px) {
+    .categories { grid-template-columns: 1fr; }
+    .card { padding: 1.5rem; }
+    .result-actions { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<div class="stars"></div>
+
+<div id="app">
+  <div class="logo">&#9790; Moon Quiz</div>
+  <div class="tagline">Test your knowledge under the stars</div>
+
+  <div class="card" id="screen-home">
+    <div class="screen-title">Choose Your Category</div>
+    <div class="categories">
+      <button class="cat-btn" onclick="startQuiz('sport')">
+        <span class="cat-icon">&#9917;</span>
+        <span>Sport</span>
+      </button>
+      <button class="cat-btn" onclick="startQuiz('art')">
+        <span class="cat-icon">&#127912;</span>
+        <span>Art</span>
+      </button>
+      <button class="cat-btn" onclick="startQuiz('it')">
+        <span class="cat-icon">&#128187;</span>
+        <span>IT</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card" id="screen-quiz" style="display:none;">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+    </div>
+    <div class="q-meta">
+      <span class="q-cat" id="q-cat-label"></span>
+      <span id="q-counter"></span>
+    </div>
+    <div class="question" id="question-text"></div>
+    <div class="options" id="options-list"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next Question →</button>
+  </div>
+
+  <div class="card" id="screen-result" style="display:none;">
+    <div class="result-icon" id="result-icon"></div>
+    <div class="score-display">
+      <div class="score-big" id="score-big"></div>
+      <div class="score-sub" id="score-sub"></div>
+    </div>
+    <div class="result-msg" id="result-msg"></div>
+    <div class="result-actions">
+      <button class="btn-secondary" onclick="showHome()">&#8592; Categories</button>
+      <button class="btn-primary" onclick="restartSame()">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = {
+  sport: [
+    { q: "How many players are on a standard football (soccer) team?", options: ["9","10","11","12"], answer: 2 },
+    { q: "In which sport would you perform a 'slam dunk'?", options: ["Volleyball","Basketball","Tennis","Badminton"], answer: 1 },
+    { q: "How many Grand Slam tournaments are there in tennis?", options: ["2","3","4","5"], answer: 2 },
+    { q: "Which country has won the most FIFA World Cup titles?", options: ["Germany","Argentina","Brazil","France"], answer: 2 },
+    { q: "How long is an Olympic swimming pool?", options: ["25m","50m","75m","100m"], answer: 1 },
+    { q: "In boxing, how many rounds does a professional world title fight last?", options: ["10","12","15","8"], answer: 1 },
+    { q: "What sport uses a shuttlecock?", options: ["Squash","Badminton","Table Tennis","Racquetball"], answer: 1 },
+  ],
+  art: [
+    { q: "Who painted the Mona Lisa?", options: ["Michelangelo","Raphael","Leonardo da Vinci","Caravaggio"], answer: 2 },
+    { q: "Which art movement is Salvador Dalí associated with?", options: ["Cubism","Surrealism","Impressionism","Baroque"], answer: 1 },
+    { q: "In which city is the Louvre Museum located?", options: ["Rome","Madrid","London","Paris"], answer: 3 },
+    { q: "What technique involves applying thick paint to a canvas with a knife or brush?", options: ["Fresco","Impasto","Tempera","Watercolor"], answer: 1 },
+    { q: "Who sculpted 'The Thinker'?", options: ["Bernini","Rodin","Donatello","Brancusi"], answer: 1 },
+    { q: "Which color is created by mixing red and blue?", options: ["Green","Orange","Purple","Brown"], answer: 2 },
+    { q: "What is the term for a self-portrait sculpture or painting?", options: ["Still life","Self-portrait","Portrait","Bust"], answer: 1 },
+  ],
+  it: [
+    { q: "What does 'HTTP' stand for?", options: ["HyperText Transfer Protocol","High Transfer Text Process","HyperText Transmission Path","Hosted Text Transfer Protocol"], answer: 0 },
+    { q: "Which programming language is known as the language of the web's front end?", options: ["Python","Java","JavaScript","C++"], answer: 2 },
+    { q: "What does 'CPU' stand for?", options: ["Central Processing Unit","Computer Power Unit","Core Processing Utility","Central Program Unit"], answer: 0 },
+    { q: "What is the binary representation of the decimal number 10?", options: ["1001","1010","1100","0110"], answer: 1 },
+    { q: "Which company created the Linux kernel?", options: ["Microsoft","Apple","IBM","Linus Torvalds (independent)"], answer: 3 },
+    { q: "What does 'SQL' stand for?", options: ["Structured Query Language","Simple Question Language","System Query Loop","Structured Quick Logic"], answer: 0 },
+    { q: "Which data structure follows LIFO (Last In, First Out) order?", options: ["Queue","Linked List","Stack","Tree"], answer: 2 },
+  ]
+};
+
+const CAT_LABELS = { sport: "⚽ Sport", art: "🎨 Art", it: "💻 IT" };
+const LETTERS = ["A","B","C","D"];
+
+let currentCat = '';
+let questions = [];
+let current = 0;
+let score = 0;
+let answered = false;
+
+function showScreen(id) {
+  ['screen-home','screen-quiz','screen-result'].forEach(s => {
+    const el = document.getElementById(s);
+    el.style.display = 'none';
+  });
+  const target = document.getElementById(id);
+  target.style.display = 'block';
+  target.style.animation = 'none';
+  void target.offsetWidth;
+  target.style.animation = 'fadeUp 0.5s ease both';
+}
+
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+function startQuiz(cat) {
+  currentCat = cat;
+  questions = shuffle(QUESTIONS[cat]).slice(0, 5);
+  current = 0; score = 0;
+  showScreen('screen-quiz');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  answered = false;
+  const q = questions[current];
+  const total = questions.length;
+
+  document.getElementById('q-cat-label').textContent = CAT_LABELS[currentCat];
+  document.getElementById('q-counter').textContent = `${current + 1} / ${total}`;
+  document.getElementById('question-text').textContent = q.q;
+  document.getElementById('progress-bar').style.width = `${(current / total) * 100}%`;
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+
+  const nb = document.getElementById('next-btn');
+  nb.className = 'next-btn';
+  nb.textContent = current === total - 1 ? 'See Results ✦' : 'Next Question →';
+
+  const list = document.getElementById('options-list');
+  list.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span class="opt-letter">${LETTERS[i]}</span>${opt}`;
+    btn.onclick = () => selectAnswer(i, btn);
+    list.appendChild(btn);
+  });
+}
+
+function selectAnswer(idx, btn) {
+  if (answered) return;
+  answered = true;
+  const q = questions[current];
+  const allBtns = document.querySelectorAll('.opt-btn');
+  allBtns.forEach(b => b.disabled = true);
+
+  const fb = document.getElementById('feedback');
+
+  if (idx === q.answer) {
+    btn.classList.add('correct');
+    score++;
+    fb.className = 'feedback correct-fb show';
+    fb.textContent = '✓ Correct! Well done.';
+  } else {
+    btn.classList.add('wrong');
+    allBtns[q.answer].classList.add('correct');
+    fb.className = 'feedback wrong-fb show';
+    fb.textContent = `✗ The correct answer was: ${q.options[q.answer]}`;
+  }
+
+  document.getElementById('next-btn').className = 'next-btn show';
+}
+
+function nextQuestion() {
+  current++;
+  if (current < questions.length) {
+    renderQuestion();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  const total = questions.length;
+  const pct = Math.round((score / total) * 100);
+  let icon, msg;
+
+  if (pct === 100)      { icon = '🌕'; msg = 'Perfect score! You truly belong among the stars.'; }
+  else if (pct >= 80)   { icon = '🌖'; msg = 'Excellent! Your knowledge illuminates the darkness.'; }
+  else if (pct >= 60)   { icon = '🌗'; msg = 'Good effort! The moon is proud of your progress.'; }
+  else if (pct >= 40)   { icon = '🌘'; msg = 'Keep studying — even the moon was once a mystery.'; }
+  else                   { icon = '🌑'; msg = 'Don\'t give up! Every expert was once a beginner.'; }
+
+  document.getElementById('result-icon').textContent = icon;
+  document.getElementById('score-big').textContent = `${score}/${total}`;
+  document.getElementById('score-sub').textContent = `${pct}% correct · ${CAT_LABELS[currentCat]}`;
+  document.getElementById('result-msg').textContent = msg;
+  document.getElementById('progress-bar').style.width = '100%';
+
+  showScreen('screen-result');
+}
+
+function showHome() { showScreen('screen-home'); }
+function restartSame() { startQuiz(currentCat); }
+</script>
+</body>
+</html>
