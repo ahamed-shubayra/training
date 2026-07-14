@@ -1,0 +1,135 @@
+---
+- name: Reboot systems after patching when required
+  gather_facts: false
+  become: true
+  hosts: cortex.prod.2
+  serial: 1
+  max_fail_percentage: 25
+  vars:
+    reboot_timeout: 1800
+    minimum_uptime_days: 5 # Set this to the number of days since the last patch.
+    minimum_uptime_seconds: "{{ (minimum_uptime_days * 24 * 60 * 60) | int }}"
+
+  tasks:
+    - block:
+        - name: Verify servers connectivity
+          ansible.builtin.wait_for_connection:
+            timeout: 30
+          #no_log: true
+        - name: Gather facts
+          ansible.builtin.setup:
+            gather_subset:
+              - min
+              - hardware
+      rescue:
+        - name: Report unreachable servers
+          ansible.builtin.debug:
+            msg: "{{ inventory_hostname }} excluded from playbook due to connection issue"
+        - name: End play for this host
+          ansible.builtin.meta: end_host
+
+
+    - block:
+        - name: Ensure needs-restarting is installed for RHEL
+          ansible.builtin.package:
+            name: yum-utils
+            state: present
+
+        - name: Check if reboot is required RHEL
+          ansible.builtin.command: needs-restarting -r
+          register: reboot_check_result_redhat
+          changed_when: false
+          failed_when: reboot_check_result_redhat['rc'] not in [0, 1]
+
+        - name: Check if dnf-automatic timer exists and active
+          ansible.builtin.systemd:
+            name: dnf-automatic.timer
+          register: dnf_automatic_timer_status
+          failed_when: false
+          changed_when: false
+
+        - name: Set fact if dnf-automatic is active
+          ansible.builtin.set_fact:
+            dnf_automatic_running: >-
+              {{
+                dnf_automatic_timer_status.status is defined
+                and
+                dnf_automatic_timer_status.status.LoadState  == 'loaded'
+                and
+                dnf_automatic_timer_status.status.ActiveState  == 'active'
+              }}
+
+        - name: Report reboot skipped due to dnf automatic
+          ansible.builtin.debug:
+            msg: "Reboot skipped on {{ inventory_hostname }} because dnf-automatic timer is active"
+          when:
+            - reboot_check_result_redhat['rc'] == 1
+            - dnf_automatic_running
+
+        - name: reboot RHEL if required
+          ansible.builtin.reboot:
+            reboot_timeout: "{{ reboot_timeout }}"
+          when:
+            - reboot_check_result_redhat['rc'] == 1
+            - not dnf_automatic_running
+            - ansible_uptime_seconds >= (minimum_uptime_seconds | int)
+
+      when: ansible_os_family == "RedHat"
+
+    - block:
+        - name: Check if reboot is required Debian
+          ansible.builtin.stat:
+            path: /run/reboot-required
+          register: reboot_check_result_ubuntu
+
+        - name: Check unattended upgrades timer status
+          ansible.builtin.systemd:
+            name: apt-daily-upgrade.timer
+          register: unattended_upgrade_timer_status
+          failed_when: false
+          changed_when: false
+
+        - name: Set fact if unattended upgrades is active
+          ansible.builtin.set_fact:
+            unattended_upgrades_running: >-
+              {{
+                unattended_upgrade_timer_status is defined
+                and
+                unattended_upgrade_timer_status.status.LoadState == 'loaded'
+                and
+                unattended_upgrade_timer_status.status.ActiveState == 'active'
+              }}
+
+        - name: Report reboot skipped due to unattended upgrades
+          ansible.builtin.debug:
+            msg: "Reboot skipped on {{ inventory_hostname }} because unattended-upgrades timer is active"
+          when:
+            - reboot_check_result_ubuntu['stat']['exists']
+            - unattended_upgrades_running
+
+
+        - name: reboot Debian if needed
+          ansible.builtin.reboot:
+            reboot_timeout: "{{ reboot_timeout }}"
+          when:
+            - reboot_check_result_ubuntu['stat']['exists']
+            - not unattended_upgrades_running
+            - ansible_uptime_seconds >= (minimum_uptime_seconds |int)
+
+      when: ansible_os_family == "Debian"
+
+
+
+
+
+
+
+
+
+unattended_upgrade_timer_status is defined
+and
+unattended_upgrade_timer_status.status is defined
+and
+unattended_upgrade_timer_status.status.LoadState == 'loaded'
+and
+unattended_upgrade_timer_status.status.ActiveState == 'active'
